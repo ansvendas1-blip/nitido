@@ -136,6 +136,24 @@
   .bk{font-size:11.5px;font-weight:600;color:var(--slate);background:#fff;border:1px solid var(--line);border-radius:20px;padding:6px 11px}
   .bk b{color:var(--ink)}
 
+  .qa{display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap}
+  .qa-btn{border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:13px;padding:10px 14px;border-radius:11px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .qa-btn svg{width:17px;height:17px}
+  .qa-btn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .qa-btn:hover{border-color:var(--blue)}
+  .panorama{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-bottom:14px}
+  .pcard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 15px;box-shadow:var(--shadow)}
+  .pcard.clk{cursor:pointer}
+  .pcard.clk:hover{border-color:var(--blue)}
+  .pcard .pl{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--slate);display:flex;align-items:center;gap:6px}
+  .pcard .pl svg{width:14px;height:14px;stroke:var(--slate)}
+  .pcard .pv{font-size:21px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pcard .ps{font-size:11px;color:var(--slate);margin-top:3px}
+  .alertbar{display:flex;align-items:center;gap:10px;background:var(--neg-50);color:#a83232;border:1px solid #f1c9c9;border-radius:14px;padding:12px 14px;font-size:13px;font-weight:600;margin-bottom:14px;cursor:pointer}
+  .alertbar.amber{background:var(--warn-50);color:#9a6410;border-color:#ead9b0}
+  .alertbar svg{width:18px;height:18px;flex-shrink:0}
+  @media(min-width:860px){.panorama{grid-template-columns:repeat(4,1fr)}}
+
   .scrim{position:fixed;inset:0;background:rgba(16,33,46,.45);opacity:0;pointer-events:none;transition:.25s;z-index:60}
   .scrim.open{opacity:1;pointer-events:auto}
   .drawer{position:fixed;top:0;right:0;height:100%;width:min(420px,92vw);background:var(--canvas);z-index:61;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.2)}
@@ -229,13 +247,22 @@
 
     <div class="screens">
       <section class="screen active" id="s-inicio">
-        <div class="sec-title">Visão geral</div>
+        <div class="qa" id="quickActions"></div>
+        <div class="sec-title">Panorama financeiro</div>
+        <div class="panorama" id="panorama"></div>
+        <div id="alertBar"></div>
         <div class="grid cols-2">
           <div class="card"><div class="card-h"><h3>Fluxo de caixa</h3><span class="tag">6 meses</span></div><div class="chartbox" id="chFluxo"></div></div>
           <div class="card"><div class="card-h"><h3>Despesas por categoria</h3><span class="tag">mês atual</span></div><div id="chCat"></div></div>
         </div>
-        <div class="sec-title" style="margin-top:20px">Próximos vencimentos <button class="btn ghost sm" onclick="go('contas')">Ver contas</button></div>
-        <div class="card"><div id="vencList"></div></div>
+        <div class="grid cols-2" style="margin-top:14px">
+          <div class="card"><div class="card-h"><h3>Próximos vencimentos</h3><button class="btn ghost sm" onclick="go('contas')">Ver todas</button></div><div id="vencList"></div></div>
+          <div class="card"><div class="card-h"><h3>Metas do mês</h3><span class="tag">realizado</span></div><div id="homeMetas"></div></div>
+        </div>
+        <div class="grid cols-2" style="margin-top:14px">
+          <div class="card"><div class="card-h"><h3>Maiores a receber</h3><span class="tag">em aberto</span></div><div id="maioresRec"></div></div>
+          <div class="card"><div class="card-h"><h3>Maiores a pagar</h3><span class="tag">em aberto</span></div><div id="maioresPag"></div></div>
+        </div>
       </section>
 
       <section class="screen" id="s-lancar">
@@ -574,7 +601,31 @@ function toast(m){const t=document.getElementById('toast');t.innerHTML=ic('check
 
 function renderDRE(){const d=computeDRE(db.tx,curEmp,CUR);document.getElementById('dreTable').innerHTML='<tr><td>Receita bruta</td><td class="pos">'+money(d.receita)+'</td></tr><tr class="sub"><td>(–) Impostos</td><td>'+money(d.impostos)+'</td></tr><tr class="sub"><td>(–) Custos (mercadoria/frete)</td><td>'+money(d.custos)+'</td></tr><tr><td>Lucro bruto</td><td class="pos">'+money(d.lucroBruto)+'</td></tr><tr class="sub"><td>(–) Despesas operacionais</td><td>'+money(d.despesas)+'</td></tr><tr class="tot"><td>Lucro líquido</td><td class="'+(d.lucro>=0?'pos':'neg')+'">'+money(d.lucro)+'</td></tr><tr class="sub"><td>Margem líquida</td><td>'+d.margem.toFixed(1).replace('.',',')+'%</td></tr>';}
 function renderMetas(){const k=computeKPIs(db.tx,curEmp,CUR);const ads=byCategory(db.tx,curEmp,CUR).find(c=>c[0]==='Marketing/Ads');const adsV=ads?ads[1]:0;const metas=[{nm:'Faturamento',real:k.inc,meta:150000,inv:false},{nm:'Teto de despesas',real:k.out,meta:90000,inv:true},{nm:'Gasto com Ads',real:adsV,meta:7000,inv:true}];document.getElementById('metasBox').innerHTML=metas.map(m=>{const pct=Math.min(m.meta?m.real/m.meta*100:0,100);const over=m.real>m.meta;const color=m.inv?(over?'var(--neg)':(pct>85?'var(--warn)':'var(--pos)')):(pct>=100?'var(--pos)':(pct>75?'var(--warn)':'var(--blue)'));return '<div class="meta"><div class="top"><span class="nm">'+m.nm+'</span><span class="vl">'+moneyK(m.real)+' / '+moneyK(m.meta)+'</span></div><div class="bar"><span style="width:'+pct+'%;background:'+color+'"></span></div></div>';}).join('')+(adsV>7000?'<div class="hint" style="text-align:left;color:var(--neg)">'+ic('alert')+' Ads estourou a meta em '+money(adsV-7000)+'.</div>':'');}
-function renderAll(){renderHeader();renderCharts();renderVenc();renderContas();renderDRE();renderMetas();}
+function homeStats(emp){const k=computeKPIs(db.tx,emp,CUR);const dre=computeDRE(db.tx,emp,CUR);const abertas=db.contas.filter(c=>inEmp(c,emp)&&c.status!=='pago');const rec=abertas.filter(c=>c.dir==='in'),pag=abertas.filter(c=>c.dir==='out');const sum=a=>a.reduce((s,c)=>s+c.valor,0);const atr=abertas.filter(c=>c.venc<TODAY);return {saldo:k.res,margem:dre.margem,aReceber:sum(rec),aPagar:sum(pag),nRec:rec.length,nPag:pag.length,recAtr:rec.filter(c=>c.venc<TODAY).length,pagAtr:pag.filter(c=>c.venc<TODAY).length,projetado:k.res+sum(rec)-sum(pag),atrasadas:atr.length,atrasadasVal:sum(atr),vencHoje:abertas.filter(c=>c.venc===TODAY).length};}
+function pcard(accent,label,icon,value,sub,onclick){return '<div class="pcard'+(onclick?' clk':'')+'" style="border-left:4px solid '+accent+'"'+(onclick?' onclick="'+onclick+'"':'')+'><div class="pl">'+ic(icon)+label+'</div><div class="pv">'+value+'</div><div class="ps">'+sub+'</div></div>';}
+function miniRow(c){const s=situInfo(c);return '<div class="tx"><div class="av '+c.dir+'">'+ic(c.dir==='in'?'up':'down')+'</div><div class="info"><div class="t1">'+esc(c.contato)+'</div><div class="t2">'+esc(c.cat)+' · vence '+fmtDate(c.venc)+'</div></div><div class="right"><div class="amt '+c.dir+'">'+money(c.valor)+'</div><span class="badge '+s[0]+'">'+s[1]+'</span></div></div>';}
+function metasHTML(){const k=computeKPIs(db.tx,curEmp,CUR);const ads=byCategory(db.tx,curEmp,CUR).find(c=>c[0]==='Marketing/Ads');const adsV=ads?ads[1]:0;const metas=[{nm:'Faturamento',real:k.inc,meta:150000,inv:false},{nm:'Teto de despesas',real:k.out,meta:90000,inv:true},{nm:'Gasto com Ads',real:adsV,meta:7000,inv:true}];return metas.map(m=>{const pct=Math.min(m.meta?m.real/m.meta*100:0,100);const over=m.real>m.meta;const color=m.inv?(over?'var(--neg)':(pct>85?'var(--warn)':'var(--pos)')):(pct>=100?'var(--pos)':(pct>75?'var(--warn)':'var(--blue)'));return '<div class="meta"><div class="top"><span class="nm">'+m.nm+'</span><span class="vl">'+moneyK(m.real)+' / '+moneyK(m.meta)+'</span></div><div class="bar"><span style="width:'+pct+'%;background:'+color+'"></span></div></div>';}).join('')+(adsV>7000?'<div class="hint" style="text-align:left;color:var(--neg)">'+ic('alert')+' Ads estourou em '+money(adsV-7000)+'.</div>':'');}
+function goFiltro(dir){F=defFilter();F.tipo=dir;renderContas();go('contas');}
+function goAtrasadas(){F=defFilter();F.situacoes=['atrasada'];renderContas();go('contas');}
+function novo(t){go('lancar');setTipo(t);}
+function renderHome(){const s=homeStats(curEmp);
+  document.getElementById('quickActions').innerHTML='<button class="qa-btn primary" onclick="novo(\'in\')">'+ic('plus')+'Nova entrada</button><button class="qa-btn" onclick="novo(\'out\')">'+ic('minus')+'Nova saída</button><button class="qa-btn" onclick="go(\'contas\')">'+ic('contas')+'Ver contas</button>';
+  document.getElementById('panorama').innerHTML=
+    pcard('var(--pos)','A receber','up',money(s.aReceber),s.nRec+' em aberto'+(s.recAtr?' · '+s.recAtr+' atrasadas':''),"goFiltro('in')")
+   +pcard('var(--neg)','A pagar','down',money(s.aPagar),s.nPag+' em aberto'+(s.pagAtr?' · '+s.pagAtr+' atrasadas':''),"goFiltro('out')")
+   +pcard('var(--blue)','Posição projetada','money',(s.projetado<0?'– ':'')+money(Math.abs(s.projetado)),'saldo + a receber − a pagar','')
+   +pcard('var(--navy)','Margem líquida','rel',s.margem.toFixed(1).replace('.',',')+'%','lucro ÷ receita do mês',"go('rel')");
+  let a='';
+  if(s.atrasadas>0)a='<div class="alertbar" onclick="goAtrasadas()">'+ic('alert')+'<span><b>'+s.atrasadas+'</b> conta(s) atrasada(s) — '+money(s.atrasadasVal)+'. Toque para ver.</span></div>';
+  else if(s.vencHoje>0)a='<div class="alertbar amber" onclick="go(\'contas\')">'+ic('clock')+'<span><b>'+s.vencHoje+'</b> conta(s) vencendo hoje.</span></div>';
+  document.getElementById('alertBar').innerHTML=a;
+  const abertas=db.contas.filter(c=>inEmp(c,curEmp)&&c.status!=='pago');
+  const topRec=abertas.filter(c=>c.dir==='in').sort((a,b)=>b.valor-a.valor).slice(0,3);
+  const topPag=abertas.filter(c=>c.dir==='out').sort((a,b)=>b.valor-a.valor).slice(0,3);
+  document.getElementById('maioresRec').innerHTML=topRec.length?topRec.map(miniRow).join(''):'<div class="empty">Nada em aberto.</div>';
+  document.getElementById('maioresPag').innerHTML=topPag.length?topPag.map(miniRow).join(''):'<div class="empty">Nada em aberto.</div>';
+  const hm=document.getElementById('homeMetas');if(hm)hm.innerHTML=metasHTML();}
+function renderAll(){renderHeader();renderHome();renderCharts();renderVenc();renderContas();renderDRE();renderMetas();}
 
 window.addEventListener('load',function(){
   load();
