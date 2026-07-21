@@ -145,12 +145,14 @@
   .porque .nota{font-size:10.5px;opacity:.72;margin-top:9px;line-height:1.5;color:#fff}
 
   /* --- Últimos 7 dias --- */
-  .d7{display:flex;align-items:flex-end;gap:5px;height:60px;margin:4px 0 8px}
+  .d7{display:flex;align-items:flex-end;gap:5px;height:78px;margin:4px 0 10px}
   .d7 .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;min-width:0;cursor:pointer}
-  .d7 .bx{width:100%;max-width:30px;background:var(--neg-50);border-radius:6px 6px 3px 3px;min-height:3px;transition:background .15s}
-  .d7 .col:hover .bx{background:#f3c9c9}
+  .d7 .bx{width:100%;max-width:30px;background:#E8A0A0;border-radius:6px 6px 3px 3px;min-height:3px;transition:background .15s}
+  .d7 .col:hover .bx{background:var(--neg)}
   .d7 .col.hoje .bx{background:var(--neg)}
+  .d7 .col.zero .bx{background:var(--line)}
   .d7 .dl{font-size:9.5px;color:var(--slate);font-weight:600;white-space:nowrap}
+  .d7 .vl{font-size:9px;color:var(--slate);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
   .d7 .col.hoje .dl{color:var(--neg);font-weight:800}
   .d7foot{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;color:var(--slate);border-top:1px solid var(--line);padding-top:9px}
   .d7foot b{color:var(--ink);font-size:13.5px;font-variant-numeric:tabular-nums}
@@ -727,8 +729,16 @@ function computeDRE(movs,emp,month,cats){
   const lucro=lb-despesas;
   return {receita:receita,impostos:impostos,custos:custos,lucroBruto:lb,despesas:despesas,lucro:lucro,margem:receita>0?(lucro/receita*100):null};
 }
+// Pendente = tudo que NÃO está pago. Antes era `status==='pendente'` (igualdade
+// exata), e isso é uma armadilha: qualquer linha com status diferente do
+// esperado ('aberto', vazio, algo vindo de importação ou de versão antiga)
+// sumia calada de "A receber"/"A pagar" — o dinheiro existia no banco e não
+// aparecia na tela. É exatamente a reclamação nº 1 dos usuários do líder de
+// mercado ("lançamento sumiu"). Em app financeiro, sumir em silêncio é o pior
+// defeito possível: melhor mostrar a mais e o usuário corrigir do que esconder.
+function ehPendente(m){return m.status!=='pago';}
 function pendentes(movs,emp,t){
-  return movs.filter(function(m){return m.status==='pendente'&&inEmp(m,emp)&&(!t||m.tipo===t);});
+  return movs.filter(function(m){return ehPendente(m)&&inEmp(m,emp)&&(!t||m.tipo===t);});
 }
 function homeStats(movs,emp,month,si,cats,today){
   const T=today||TODAY;
@@ -753,7 +763,7 @@ function applyFilters(movs,emp,f,today){
     if(!inEmp(m,emp))return false;
     const st=situ(m,T);
     if(f.rapido==='pagos'&&st!=='pago')return false;
-    if(f.rapido==='avencer'&&m.status!=='pendente')return false;
+    if(f.rapido==='avencer'&&!ehPendente(m))return false;
     if(f.rapido==='atrasados'&&st!=='atrasada')return false;
     if(f.tipo!=='all'&&m.tipo!==f.tipo)return false;
     if(f.from||f.to){const d=m.status==='pago'?dataEf(m):m.data;if(!d)return false;if(f.from&&d<f.from)return false;if(f.to&&d>f.to)return false;}
@@ -980,7 +990,7 @@ function movRow(m,acts){
   let btns='';
   if(acts){
     btns='<div class="rowbtns">'
-      +(m.status==='pendente'?'<button class="ib ok" title="Dar baixa" onclick="baixar(\''+m.id+'\')">'+ic('check')+'</button>':'')
+      +(ehPendente(m)?'<button class="ib ok" title="Dar baixa" onclick="baixar(\''+m.id+'\')">'+ic('check')+'</button>':'')
       +'<button class="ib" title="Editar" onclick="editMov(\''+m.id+'\')">'+ic('edit')+'</button>'
       +'<button class="ib del" title="Apagar" onclick="delMov(\''+m.id+'\')">'+ic('trash')+'</button></div>';
   }
@@ -1050,8 +1060,10 @@ function render7(){
     const hoje=d.data===TODAY;
     const rot=hoje?'hoje':DIAS_SEM[dt.getDay()];
     const tit=fmtDate(d.data)+' — saiu '+money(d.saiu)+(d.entrou>0?' · entrou '+money(d.entrou):'');
-    return '<div class="col'+(hoje?' hoje':'')+'" title="'+esc(tit)+'" onclick="verDia(\''+d.data+'\')">'
-          +'<div class="bx" style="height:'+h+'px"></div><div class="dl">'+rot+'</div></div>';
+    // o número em cima da barra: quem olha quer o valor, não só a proporção
+    const vl=d.saiu>0?'<div class="vl">'+moneyK(d.saiu)+'</div>':'<div class="vl">&nbsp;</div>';
+    return '<div class="col'+(hoje?' hoje':'')+(d.saiu===0?' zero':'')+'" title="'+esc(tit)+'" onclick="verDia(\''+d.data+'\')">'
+          +vl+'<div class="bx" style="height:'+h+'px"></div><div class="dl">'+rot+'</div></div>';
   }).join('');
   const media=r.totalSaiu/7;
   el.innerHTML='<div class="d7">'+cols+'</div>'
